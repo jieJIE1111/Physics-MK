@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software or dataset, please cite the paper below."
+title: "PM-KMNet"
+type: software
+authors:
+  - family-names: Liu
+    given-names: Jilong
+    email: liujilong@mails.neu.edu.cn
+repository-code: "https://github.com/jieJIE1111/Physics-MK"
+preferred-citation:
+  type: article
+  title: "Physics-guided Mamba-KAN Hybrid Network (PM-KMNet): Robust prognostics for ship propulsion systems under distribution shifts"
+  authors:
+    - family-names: Zhang
+      given-names: Meng
+    - family-names: Liu
+      given-names: Jilong
+    - family-names: Han
+      given-names: Bing
+    - family-names: Dong
+      given-names: Shengli
+    - family-names: Cui
+      given-names: Tong
+    - family-names: Ren
+      given-names: Yan
+  journal: "Advanced Engineering Informatics"
+  volume: "73"
+  year: 2026
+  doi: "10.1016/j.aei.2026.104545"
+
+
