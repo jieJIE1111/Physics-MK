@@ -1,61 +1,111 @@
+# PM-KMNet: Physics-guided Mamba-KAN Hybrid Network
 
-***
+[![Paper](https://img.shields.io/badge/Advanced%20Engineering%20Informatics-10.1016%2Fj.aei.2026.104545-blue)](https://doi.org/10.1016/j.aei.2026.104545)
 
-# 🛳️ Ship Main Engine Sensor Dataset
-# 船舶主机传感器数据集
+Official research code and de-identified data accompanying the paper **“Physics-guided Mamba-KAN Hybrid Network (PM-KMNet): Robust prognostics for ship propulsion systems under distribution shifts”**, published in *Advanced Engineering Informatics* (2026).
 
-## 📖 Overview / 概述
+PM-KMNet predicts ship main-engine thrust-bearing pad temperature under changing voyage and vessel conditions. It combines an interpretable thermal recurrence with a data-driven residual model so that physical structure governs the prediction while learned dynamics compensate for unmodeled effects.
 
-This dataset contains **normalized** and **desensitized** sensor data collected from the main engines of two large vessels: **YuanFuYang (远福洋)** and **YuanBeiHai (远北海)**.
-The data is organized by individual voyages. All physical values have been scaled to a range of `[0, 1]`, and sensitive time information has been converted into relative time steps.
+## Method at a glance
 
-本数据集包含从 **远福洋** 和 **远北海** 两艘大型船舶主机采集的**归一化**及**脱敏**传感器数据。
-数据按独立航次组织。所有物理数值均已缩放至 `[0, 1]` 区间，敏感的时间信息已转换为相对时间步长。
+- **Physics meta-learner:** a compact KAN estimates operating-condition-dependent heat-generation, cooling, and thermal-inertia parameters.
+- **Residual compensator:** Mamba models vibration, hydraulic, and other residual dynamics that are not captured by the simplified thermal balance.
+- **Explicit integration:** an Euler recurrence converts the learned energy terms into a temperature trajectory.
+- **Progressive optimization:** three phases prioritize physics learning, calibrate the residual branch, and then jointly fine-tune the full model.
 
----
+In the paper's main cross-voyage test, PM-KMNet achieved an RMSE of **0.667 °C**, an MAE of **0.527 °C**, and an R² of **0.9656**. Please consult the paper for the complete protocol, baselines, ablations, uncertainty analysis, and cross-vessel results.
 
-## ⚙️ Data Specifications / 数据规格
+## Repository contents
 
-*   **File Format / 文件格式**: `.csv`
-*   **Value Range / 数值范围**: `0.0` to `1.0` (Min-Max Normalized / 归一化)
-*   **Missing Values / 缺失值**: Filled with `0` (None / 无缺失)
-*   **Time Format / 时间格式**: Relative Steps (No absolute timestamps / 无绝对时间戳)
+| Path | Description |
+| --- | --- |
+| `PMK.py` | Complete training, ablation, evaluation, and visualization script for PM-KMNet. |
+| `Dataset_A.csv` | Primary de-identified dataset included with the release. |
+| `Dataset_B.csv` | Primary de-identified dataset included with the release. |
+| `Voyage_3.csv`–`Voyage_8.csv` | Additional de-identified voyage datasets used for cross-voyage and cross-vessel evaluation. |
 
----
+## Environment
 
-## 📊 Feature Description / 特征描述
+Python 3.10 and a CUDA-capable Linux environment are recommended for the full Mamba configuration.
 
-Each CSV file contains **13 columns**. The columns correspond to the following physical sensors and operational parameters:
-每个 CSV 文件包含 **13 列**数据。各列对应的物理传感器及运行参数如下：
+```bash
+pip install -r requirements.txt
+pip install mamba-ssm
+```
 
-| Variable Name (变量名) | Chinese Name (中文名) | Description (English) | Role (角色) |
-| :--- | :--- | :--- | :--- |
-| **step** | **时间步长** | **Relative Time Index** (Sequence Order) | **Index / 索引** |
-| **Me1Thrust_bearing_pad_temp** | **推力轴承瓦温** | **Main Engine Thrust Bearing Pad Temperature** | **Target / 预测目标** |
-| `Me1Nms` | 主机转速 | Main Engine RPM (Revolutions Per Minute) | Input Feature |
-| `Me1Load` | 主机负荷 | Main Engine Load Indicator | Input Feature |
-| `Me1Axial_vib` | 轴向振动 | Main Engine Axial Vibration | Input Feature |
-| `Me1Main_brg_lo_in_press` | 主轴承滑油进口压力 | Main Bearing Lube Oil Inlet Pressure | Input Feature |
-| `Me1Main_brg_lo_in_temp` | 主轴承滑油进口温度 | Main Bearing Lube Oil Inlet Temperature | Input Feature |
-| `Me1Sw_com_temp` | 海水总管温度 | Seawater Common/Inlet Temperature | Input Feature |
-| `Df` | 燃油流量 | Fuel Flow Meter Reading | Input Feature |
-| `Da` | 吃水 | Draft (Depth of the ship's keel) | Input Feature |
-| `Rudder` | 舵角 | Rudder Angle | Input Feature |
-| `TrueVwr` | 相对风速 | Relative Wind Speed | Input Feature |
-| `EeIndex8` | 能效索引 | Energy Efficiency Index | Input Feature |
+`mamba-ssm` is required to reproduce the proposed Mamba branch. If it is unavailable, `PMK.py` automatically falls back to a smaller GRU implementation; that fallback is an ablation-compatible substitute, not the full PM-KMNet architecture reported in the paper.
 
----
+## Running the released script
 
-## 📝 Notes / 备注
+The script retains the directory layout used in the research environment. Before running it:
 
-1.  **Uniformity / 一致性**:
-    *   The column `Me1Sw_com_temp` represents Seawater Temperature for both ships (mapped from `Me1Sw_in_temp` for YuanBeiHai).
-    *   `Me1Sw_com_temp` 列代表海水温度，两艘船已统一列名（远北海原为 `Me1Sw_in_temp`，已映射）。
+1. Open `PMK.py` and set `Config.base_dir` to a writable local directory.
+2. Set `Config.path_train` and `Config.path_test`, or provide the expected file names `Voyage1_Train.csv` and `Voyage2_Test.csv` under `base_dir`.
+3. Confirm that the selected CSV files contain the feature names listed below.
+4. Run:
 
-2.  **Privacy / 隐私**:
-    *   GPS coordinates (Latitude/Longitude) and MMSI (Ship ID) have been removed.
-    *   GPS 坐标（经纬度）和 MMSI（船舶识别码）已被移除。
+```bash
+python PMK.py
+```
 
-3.  **Data Quality / 数据质量**:
-    *   Columns with sensor failures (all-NaNs in raw data) have been zero-filled to ensure format consistency.
-    *   因传感器故障导致的原数据全空列已被填充为 0，以保证数据格式一致性。
+The default entry point trains the proposed model and five ablation variants, evaluates them on the test voyage, and writes checkpoints, metrics, predictions, figures, and a LaTeX table to `Config.save_dir`. This is substantially more expensive than a single-model training run.
+
+The published main experiment uses a chronological 70/30 train/validation split from the first voyage and evaluates on the second voyage. The default sequence length is 50, training uses a stride of 5, and evaluation uses a stride of 1.
+
+## Dataset / 数据集
+
+The repository contains normalized or desensitized sensor data from two large vessels, **Yuan Fu Yang (远福洋)** and **Yuan Bei Hai (远北海)**. Voyage data are released without absolute timestamps, GPS coordinates, or MMSI identifiers.
+
+本仓库包含远福洋与远北海两艘船舶的归一化或脱敏主机传感器数据。数据不包含绝对时间、GPS 坐标或 MMSI 标识。
+
+Each CSV contains the following fields:
+
+| Variable | Meaning | Model role |
+| --- | --- | --- |
+| `step` | Relative sequence index | Index |
+| `Me1Thrust_bearing_pad_temp` | Main-engine thrust-bearing pad temperature | Prediction target |
+| `Me1Nms` | Main-engine speed | Dynamic input |
+| `Me1Load` | Main-engine load | Dynamic input |
+| `Me1Axial_vib` | Axial vibration | Dynamic input |
+| `Me1Main_brg_lo_in_press` | Main-bearing lubricating-oil inlet pressure | Dynamic input |
+| `Me1Main_brg_lo_in_temp` | Main-bearing lubricating-oil inlet temperature | Dynamic input |
+| `Me1Sw_com_temp` | Seawater/common inlet temperature | Context input |
+| `Df` | Forward draft | Context input |
+| `Da` | Aft draft | Context input |
+| `Rudder` | Rudder angle | Context input |
+| `TrueVwr` | True wind speed | Context input |
+| `EeIndex8` | Slip-ratio/efficiency-related operating index | Context input |
+
+For consistent processing across vessels, the seawater-temperature field is unified as `Me1Sw_com_temp`. Columns unavailable because of sensor failure are zero-filled in the released files. When substituting other data, preserve the column names and review the fixed normalization constants in `Config` and `DataProcessor`.
+
+## Citation
+
+If this code or dataset supports your work, please cite:
+
+```bibtex
+@article{zhang2026physics,
+  title   = {Physics-guided Mamba-KAN Hybrid Network (PM-KMNet): Robust prognostics for ship propulsion systems under distribution shifts},
+  author  = {Zhang, Meng and Liu, Jilong and Han, Bing and Dong, Shengli and Cui, Tong and Ren, Yan},
+  journal = {Advanced Engineering Informatics},
+  volume  = {73},
+  pages   = {104545},
+  year    = {2026},
+  doi     = {10.1016/j.aei.2026.104545}
+}
+```
+
+GitHub also exposes the same metadata through [`CITATION.cff`](CITATION.cff).
+
+## Contribution and maintenance
+
+The published CRediT statement identifies **Jilong Liu** with conceptualization, methodology, software, formal analysis, validation, visualization, resources, project administration, original-draft preparation, and review/editing contributions.
+
+Jilong Liu maintains this repository and is currently pursuing a Ph.D. at Northeastern University, China.
+
+Contact: [liujilong@mails.neu.edu.cn](mailto:liujilong@mails.neu.edu.cn)
+
+## Responsible use
+
+The released datasets are intended for research and educational use. They are de-identified and should not be used to infer vessel identity, reconstruct routes, or make safety-critical operational decisions without independent validation.
+
+
